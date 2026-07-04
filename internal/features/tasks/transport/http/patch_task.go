@@ -12,9 +12,9 @@ import (
 )
 
 type PatchTaskRequest struct {
-	Title       core_http_types.Nullable[string] `json:"title"`
-	Description core_http_types.Nullable[string] `json:"description"`
-	Completed   core_http_types.Nullable[bool]   `json:"completed"`
+	Title       core_http_types.Nullable[string] `json:"title"       swaggertype:"string"  example:"Погулять с собакой"`
+	Description core_http_types.Nullable[string] `json:"description" swaggertype:"string"  example:"null"`
+	Completed   core_http_types.Nullable[bool]   `json:"completed"   swaggertype:"boolean"`
 }
 
 type PatchTaskResponse TaskDTOResponse
@@ -49,6 +49,25 @@ func (r *PatchTaskRequest) Validate() error {
 	return nil
 }
 
+// PatchTask 			godoc
+// @Summary 			Patch Task
+// @Description 		Updates information about a task that already exists in the system
+// @Description 		### Three–State Logic:
+// @Description 		1. **Field not passed**: `description` will be ignored, not changing DB field
+// @Description 		2. **The value is explicitly passed**: `"description": "Утром в 06:30 погулять с Бобиком"` – sets a new description for the Task
+// @Description 		3. **NULL was explicitly passed**: `"description": null` – clears a field in the DB (set to NULL)
+// @Description 		RESTRICTIONS: fields `title` and `completed` can't be set to NULL
+// @Tags 				tasks
+// @Accept 				json
+// @Produce 			json
+// @Param 				id 			path 	 	int 				true 			"ID of the Task to be patched"
+// @Param 				request 	body 	 	PatchTaskRequest 	true 			"PatchTask Request Body"
+// @Success 			200 		{object} 	PatchTaskResponse 					"Task was being patched successfully"
+// @Failure 			400 		{object} 	core_http_response.ErrorResponse 	"Bad Requset"
+// @Failure 			404 		{object} 	core_http_response.ErrorResponse 	"Task was not found"
+// @Failure 			409 		{object} 	core_http_response.ErrorResponse 	"Conflict"
+// @Failure 			500 		{object} 	core_http_response.ErrorResponse 	"Internal Server Error"
+// @Router 				/tasks/{id} [patch]
 func (h *TasksHTTPHandler) PatchTask(rw http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := core_logger.FromContext(ctx)

@@ -13,8 +13,8 @@ import (
 )
 
 type PatchUserRequest struct {
-	FullName    core_http_types.Nullable[string] `json:"full_name"`
-	PhoneNumber core_http_types.Nullable[string] `json:"phone_number"`
+	FullName    core_http_types.Nullable[string] `json:"full_name"    swaggertype:"string" example:"Mamut Rahal"`
+	PhoneNumber core_http_types.Nullable[string] `json:"phone_number" swaggertype:"string" example:"+71112223344"`
 }
 
 func (r *PatchUserRequest) Validate() error {
@@ -47,6 +47,25 @@ func (r *PatchUserRequest) Validate() error {
 
 type PatchUserResponse UserDTOResponse
 
+// PatchUser            godoc
+// @Summary  			Patching User
+// @Description     	Patching existing User by their ID
+// @Description     	### Three-state logic:
+// @Description     	1. **Field not passed**: `phone_number` ignored, value in DB not changing
+// @Description     	2. **The value is explicitly passed**: `"phone_number": "+71112223344"` – sets a new phone number in the DB
+// @Description     	3. **NULL Passed**: `"phone_number": null` – clears a field in the DB (set to NULL)
+// @Description			RESTRICTIONS: `full_name` field can't be NULL
+// @Tags 				users
+// @Accept 				json
+// @Produce 			json
+// @Param 				id path int true 									"ID of User to patch"
+// @Param 				request body PatchUserRequest true 					"Patch User Request Body"
+// @Success 			200 {object} PatchUserResponse 						"User successfully patched"
+// @Failure 			400 {object} core_http_response.ErrorResponse 		"Bad Request"
+// @Failure 			404 {object} core_http_response.ErrorResponse 		"User Not Found"
+// @Failure 			409 {object} core_http_response.ErrorResponse 		"Conflict"
+// @Failure 			500 {object} core_http_response.ErrorResponse 		"Internal Server Error"
+// @Router 				/users/{id} [patch]
 func (h *UsersHTTPHandler) PatchUser(rw http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := core_logger.FromContext(ctx)
@@ -92,6 +111,6 @@ func (h *UsersHTTPHandler) PatchUser(rw http.ResponseWriter, r *http.Request) {
 func userPatchFromRequest(request PatchUserRequest) domain.UserPatch {
 	return domain.NewUserPatch(
 		request.FullName.ToDomain(),
-		request.FullName.ToDomain(),
+		request.PhoneNumber.ToDomain(),
 	)
 }
