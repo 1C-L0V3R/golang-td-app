@@ -1,0 +1,627 @@
+basePath: /api/v1
+definitions:
+  github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse:
+    properties:
+      error:
+        example: full error text
+        type: string
+      message:
+        example: short human-readable message
+        type: string
+    type: object
+  internal_features_statistics_transport_http.GetStatisticsResponse:
+    properties:
+      tasks_avg_completion_time:
+        example: 1h33m
+        type: string
+      tasks_completed:
+        example: 10
+        type: integer
+      tasks_completed_rate:
+        example: 20
+        type: number
+      tasks_created:
+        example: 50
+        type: integer
+    type: object
+  internal_features_tasks_transport_http.CreateTaskRequest:
+    properties:
+      author_user_id:
+        example: 5
+        type: integer
+      description:
+        example: Сделать дз до четверга
+        maxLength: 1000
+        minLength: 1
+        type: string
+      title:
+        example: Домашнее задание
+        maxLength: 100
+        minLength: 1
+        type: string
+    required:
+    - author_user_id
+    - title
+    type: object
+  internal_features_tasks_transport_http.CreateTaskResponse:
+    properties:
+      author_user_id:
+        example: 5
+        type: integer
+      completed:
+        example: false
+        type: boolean
+      completed_at:
+        example: "null"
+        type: string
+      created_at:
+        example: "2026-06-29T10:30:00Z"
+        type: string
+      description:
+        example: Сделать до четверга дз по вышмату
+        type: string
+      id:
+        example: 15
+        type: integer
+      title:
+        example: Домашка
+        type: string
+      version:
+        example: 3
+        type: integer
+    type: object
+  internal_features_tasks_transport_http.GetTaskResponse:
+    properties:
+      author_user_id:
+        example: 5
+        type: integer
+      completed:
+        example: false
+        type: boolean
+      completed_at:
+        example: "null"
+        type: string
+      created_at:
+        example: "2026-06-29T10:30:00Z"
+        type: string
+      description:
+        example: Сделать до четверга дз по вышмату
+        type: string
+      id:
+        example: 15
+        type: integer
+      title:
+        example: Домашка
+        type: string
+      version:
+        example: 3
+        type: integer
+    type: object
+  internal_features_tasks_transport_http.PatchTaskRequest:
+    properties:
+      completed:
+        type: boolean
+      description:
+        example: "null"
+        type: string
+      title:
+        example: Погулять с собакой
+        type: string
+    type: object
+  internal_features_tasks_transport_http.PatchTaskResponse:
+    properties:
+      author_user_id:
+        example: 5
+        type: integer
+      completed:
+        example: false
+        type: boolean
+      completed_at:
+        example: "null"
+        type: string
+      created_at:
+        example: "2026-06-29T10:30:00Z"
+        type: string
+      description:
+        example: Сделать до четверга дз по вышмату
+        type: string
+      id:
+        example: 15
+        type: integer
+      title:
+        example: Домашка
+        type: string
+      version:
+        example: 3
+        type: integer
+    type: object
+  internal_features_tasks_transport_http.TaskDTOResponse:
+    properties:
+      author_user_id:
+        example: 5
+        type: integer
+      completed:
+        example: false
+        type: boolean
+      completed_at:
+        example: "null"
+        type: string
+      created_at:
+        example: "2026-06-29T10:30:00Z"
+        type: string
+      description:
+        example: Сделать до четверга дз по вышмату
+        type: string
+      id:
+        example: 15
+        type: integer
+      title:
+        example: Домашка
+        type: string
+      version:
+        example: 3
+        type: integer
+    type: object
+  internal_features_users_transport_http.CreateUserRequest:
+    properties:
+      full_name:
+        example: Иван Пятаков
+        maxLength: 100
+        minLength: 3
+        type: string
+      phone_number:
+        example: "+79998887766"
+        maxLength: 15
+        minLength: 10
+        type: string
+    required:
+    - full_name
+    type: object
+  internal_features_users_transport_http.CreateUserResponse:
+    properties:
+      full_name:
+        example: Иван Пятаков
+        type: string
+      id:
+        example: 10
+        type: integer
+      phone_number:
+        example: "+79998887766"
+        type: string
+      version:
+        example: 3
+        type: integer
+    type: object
+  internal_features_users_transport_http.GetUserResponse:
+    properties:
+      full_name:
+        example: Иван Пятаков
+        type: string
+      id:
+        example: 10
+        type: integer
+      phone_number:
+        example: "+79998887766"
+        type: string
+      version:
+        example: 3
+        type: integer
+    type: object
+  internal_features_users_transport_http.PatchUserRequest:
+    properties:
+      full_name:
+        example: Mamut Rahal
+        type: string
+      phone_number:
+        example: "+71112223344"
+        type: string
+    type: object
+  internal_features_users_transport_http.PatchUserResponse:
+    properties:
+      full_name:
+        example: Иван Пятаков
+        type: string
+      id:
+        example: 10
+        type: integer
+      phone_number:
+        example: "+79998887766"
+        type: string
+      version:
+        example: 3
+        type: integer
+    type: object
+  internal_features_users_transport_http.UserDTOResponse:
+    properties:
+      full_name:
+        example: Иван Пятаков
+        type: string
+      id:
+        example: 10
+        type: integer
+      phone_number:
+        example: "+79998887766"
+        type: string
+      version:
+        example: 3
+        type: integer
+    type: object
+host: 127.0.0.1:5050
+info:
+  contact: {}
+  description: Todo Application REST-API schema
+  title: Golang Todo API
+  version: "1.0"
+paths:
+  /statistics:
+    get:
+      description: Retrieving task Statistics with optional filtering by user_id and/or
+        time range
+      parameters:
+      - description: Filtering Statistics for a specific user
+        in: query
+        name: user_id
+        type: integer
+      - description: 'Start of the Statistics review period (inclusive), format: YYYY-MM-DD'
+        in: query
+        name: from
+        type: string
+      - description: 'End of the Statistics review period (exclusive), format: YYYY-MM-DD'
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Collect Statistics Successfully
+          schema:
+            $ref: '#/definitions/internal_features_statistics_transport_http.GetStatisticsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+      summary: Get Statistics
+      tags:
+      - statistics
+  /tasks:
+    get:
+      description: Viewing the list of existing in the system Tasks, with optional
+        pagination and/or filtering by authorID
+      parameters:
+      - description: Filtering tasks by authorID
+        in: query
+        name: user_id
+        type: integer
+      - description: Size of the Task Page
+        in: query
+        name: limit
+        type: integer
+      - description: Tasks Page offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Task List
+          schema:
+            items:
+              $ref: '#/definitions/internal_features_tasks_transport_http.TaskDTOResponse'
+            type: array
+        "400":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+      summary: Get Task List
+      tags:
+      - tasks
+    post:
+      consumes:
+      - application/json
+      description: Create a New Task in system
+      parameters:
+      - description: Create Task Request Body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_tasks_transport_http.CreateTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Task was successfully created
+          schema:
+            $ref: '#/definitions/internal_features_tasks_transport_http.CreateTaskResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+        "404":
+          description: Author was not found
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+      summary: Create a Task
+      tags:
+      - tasks
+  /tasks/{id}:
+    delete:
+      description: Delete existing in system Task by their ID
+      parameters:
+      - description: Deletin task ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: Task deleted successfully
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+        "404":
+          description: Task was not found
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+      summary: Deleting Task
+      tags:
+      - tasks
+    get:
+      parameters:
+      - description: ID of the received Task
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Task was found successfully
+          schema:
+            $ref: '#/definitions/internal_features_tasks_transport_http.GetTaskResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+        "404":
+          description: Task was not found
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+      summary: Get Task
+      tags:
+      - tasks
+    patch:
+      consumes:
+      - application/json
+      description: |-
+        Updates information about a task that already exists in the system
+        ### Three–State Logic:
+        1. **Field not passed**: `description` will be ignored, not changing DB field
+        2. **The value is explicitly passed**: `"description": "Утром в 06:30 погулять с Бобиком"` – sets a new description for the Task
+        3. **NULL was explicitly passed**: `"description": null` – clears a field in the DB (set to NULL)
+        RESTRICTIONS: fields `title` and `completed` can't be set to NULL
+      parameters:
+      - description: ID of the Task to be patched
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: PatchTask Request Body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_tasks_transport_http.PatchTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Task was being patched successfully
+          schema:
+            $ref: '#/definitions/internal_features_tasks_transport_http.PatchTaskResponse'
+        "400":
+          description: Bad Requset
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+        "404":
+          description: Task was not found
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+      summary: Patch Task
+      tags:
+      - tasks
+  /users:
+    get:
+      description: View User list with optional pagination
+      parameters:
+      - description: User page size
+        in: query
+        name: limit
+        type: integer
+      - description: User page offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful retrieval of the User List
+          schema:
+            items:
+              $ref: '#/definitions/internal_features_users_transport_http.UserDTOResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+      summary: List of Users
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      description: Create NewUser in system
+      parameters:
+      - description: CreateUser request body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_users_transport_http.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Successfully created user
+          schema:
+            $ref: '#/definitions/internal_features_users_transport_http.CreateUserResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+      summary: Create User
+      tags:
+      - users
+  /users/{id}:
+    delete:
+      description: Deleting a user existing in the system by their ID
+      parameters:
+      - description: deleting userID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: Successed Deleting
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+      summary: Delete User
+      tags:
+      - users
+    get:
+      description: Getting User by their ID
+      parameters:
+      - description: ID of the recipient user
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User founded successfully
+          schema:
+            $ref: '#/definitions/internal_features_users_transport_http.GetUserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+      summary: Getting User
+      tags:
+      - users
+    patch:
+      consumes:
+      - application/json
+      description: |-
+        Patching existing User by their ID
+        ### Three-state logic:
+        1. **Field not passed**: `phone_number` ignored, value in DB not changing
+        2. **The value is explicitly passed**: `"phone_number": "+71112223344"` – sets a new phone number in the DB
+        3. **NULL Passed**: `"phone_number": null` – clears a field in the DB (set to NULL)
+        RESTRICTIONS: `full_name` field can't be NULL
+      parameters:
+      - description: ID of User to patch
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Patch User Request Body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_users_transport_http.PatchUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User successfully patched
+          schema:
+            $ref: '#/definitions/internal_features_users_transport_http.PatchUserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+        "404":
+          description: User Not Found
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_1C-L0V3R_golang-td-app_internal_core_transport_http_response.ErrorResponse'
+      summary: Patching User
+      tags:
+      - users
+swagger: "2.0"
