@@ -2843,7 +2843,12 @@
             } else {
                 const authorId = document.getElementById('task-author-id').value.trim();
                 if (!authorId) { toast('Author User ID is required', 'error'); return; }
-                const body = { title, author_user_id: authorId };
+                const numericAuthorId = Number(authorId);
+                if (!Number.isInteger(numericAuthorId) || numericAuthorId <= 0) {
+                    toast('Author User ID must be a positive integer', 'error');
+                    return;
+                }
+                const body = { title, author_user_id: numericAuthorId };
                 if (desc) body.description = desc;
                 try {
                     await api('/tasks', { method: 'POST', body: JSON.stringify(body) });
