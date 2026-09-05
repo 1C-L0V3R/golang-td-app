@@ -7,6 +7,7 @@ import (
 
 	"github.com/1C-L0V3R/golang-td-app/internal/core/domain"
 	core_errors "github.com/1C-L0V3R/golang-td-app/internal/core/errors"
+	core_outbox "github.com/1C-L0V3R/golang-td-app/internal/core/outbox"
 	core_postgres_pool "github.com/1C-L0V3R/golang-td-app/internal/core/repository/postgres/pool"
 )
 
@@ -17,6 +18,12 @@ func (r *TasksRepository) PatchTask(
 ) (domain.Task, error) {
 	ctx, cancel := context.WithTimeout(ctx, r.pool.OpTimeout())
 	defer cancel()
+
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return domain.Task{}, fmt.Errorf("begin transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	query := `
 	UPDATE todoapp.tasks
@@ -39,7 +46,7 @@ func (r *TasksRepository) PatchTask(
 		author_user_id;
 	`
 
-	row := r.pool.QueryRow(
+	row := tx.QueryRow(
 		ctx,
 		query,
 		task.Title,
@@ -52,7 +59,7 @@ func (r *TasksRepository) PatchTask(
 
 	var taskModel TaskModel
 
-	err := row.Scan(
+	err = row.Scan(
 		&taskModel.ID,
 		&taskModel.Version,
 		&taskModel.Title,
@@ -75,6 +82,19 @@ func (r *TasksRepository) PatchTask(
 	}
 
 	taskDomain := taskDomainFromModel(taskModel)
+
+	event, err := core_outbox.NewTaskEvent(core_outbox.EventTypeUpdated, taskDomain)
+	if err != nil {
+		return domain.Task{}, fmt.Errorf("build outbox event: %w", err)
+	}
+
+	if err := r.outbox.InsertEvent(ctx, tx, event); err != nil {
+		return domain.Task{}, fmt.Errorf("insert outbox event: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return domain.Task{}, fmt.Errorf("commit transaction: %w", err)
+	}
 
 	return taskDomain, nil
 }
