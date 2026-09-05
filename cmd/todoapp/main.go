@@ -8,11 +8,15 @@ import (
 	"syscall"
 	"time"
 
+	core_kafka "github.com/1C-L0V3R/golang-td-app/internal/core/broker/kafka"
 	core_config "github.com/1C-L0V3R/golang-td-app/internal/core/config"
 	core_logger "github.com/1C-L0V3R/golang-td-app/internal/core/logger"
+	core_outbox_repository "github.com/1C-L0V3R/golang-td-app/internal/core/repository/postgres/outbox"
 	core_pgx_pool "github.com/1C-L0V3R/golang-td-app/internal/core/repository/postgres/pool/pgx"
 	core_http_middleware "github.com/1C-L0V3R/golang-td-app/internal/core/transport/http/middleware"
 	core_http_server "github.com/1C-L0V3R/golang-td-app/internal/core/transport/http/server"
+	outbox_postgres_repository "github.com/1C-L0V3R/golang-td-app/internal/features/outbox/repository/postgres"
+	outbox_service "github.com/1C-L0V3R/golang-td-app/internal/features/outbox/service"
 	statistics_postgres_repository "github.com/1C-L0V3R/golang-td-app/internal/features/statistics/repository/postgres"
 	statistics_service "github.com/1C-L0V3R/golang-td-app/internal/features/statistics/service"
 	statistics_transport_http "github.com/1C-L0V3R/golang-td-app/internal/features/statistics/transport/http"
@@ -26,6 +30,7 @@ import (
 	web_service "github.com/1C-L0V3R/golang-td-app/internal/features/web/service"
 	web_transport_http "github.com/1C-L0V3R/golang-td-app/internal/features/web/transport/http"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 
 	_ "github.com/1C-L0V3R/golang-td-app/docs"
 )
@@ -64,13 +69,24 @@ func main() {
 	}
 	defer pool.Close()
 
+	logger.Debug("initializing kafka producer")
+	kafkaConfig := core_kafka.NewConfigMust()
+	kafkaProducer := core_kafka.NewProducer(kafkaConfig)
+	defer func() {
+		if err := kafkaProducer.Close(); err != nil {
+			logger.Error("failed to close kafka producer", zap.Error(err))
+		}
+	}()
+
+	outboxRepository := core_outbox_repository.NewOutboxRepository()
+
 	logger.Debug("initializing feature", zap.String("feature", "users"))
-	usersRepository := users_postgres_repository.NewUsersRepository(pool)
+	usersRepository := users_postgres_repository.NewUsersRepository(pool, outboxRepository)
 	usersService := users_service.NewUsersService(usersRepository)
 	usersTransportHTTP := users_transport_http.NewUsersHTTPHandler(usersService)
 
 	logger.Debug("initializing feature", zap.String("feature", "tasks"))
-	tasksRepository := tasks_postgres_repository.NewTasksRepository(pool)
+	tasksRepository := tasks_postgres_repository.NewTasksRepository(pool, outboxRepository)
 	tasksService := tasks_service.NewTasksService(tasksRepository)
 	tasksTransportHTTP := tasks_transport_http.NewTasksHTTPHandler(tasksService)
 
@@ -83,6 +99,20 @@ func main() {
 	webRepository := web_fs_repository.NewWebRepository()
 	webService := web_service.NewWebService(webRepository)
 	webTransportHTTP := web_transport_http.NewWebHTTPHandler(webService)
+
+	logger.Debug("initializing feature", zap.String("feature", "outbox"))
+	outboxRelayRepository := outbox_postgres_repository.NewOutboxRepository(pool)
+	outboxRelayService := outbox_service.NewRelayService(
+		outbox_service.NewConfigMust(),
+		pool,
+		outboxRelayRepository,
+		kafkaProducer,
+		outbox_service.Topics{
+			Users: kafkaConfig.UsersTopic(),
+			Tasks: kafkaConfig.TasksTopic(),
+		},
+		logger,
+	)
 
 	logger.Debug("initializing HTTP server")
 	httpServer := core_http_server.NewHTTPServer(
@@ -113,8 +143,25 @@ func main() {
 
 	httpServer.RegisterSwagger()
 
-	if err := httpServer.Run(ctx); err != nil {
-		logger.Error("HTTP server run error", zap.Error(err))
-	}
+	group, groupCtx := errgroup.WithContext(ctx)
 
+	group.Go(func() error {
+		if err := httpServer.Run(groupCtx); err != nil {
+			return fmt.Errorf("run HTTP server: %w", err)
+		}
+
+		return nil
+	})
+
+	group.Go(func() error {
+		if err := outboxRelayService.Run(groupCtx); err != nil {
+			return fmt.Errorf("run outbox relay: %w", err)
+		}
+
+		return nil
+	})
+
+	if err := group.Wait(); err != nil {
+		logger.Error("application run error", zap.Error(err))
+	}
 }

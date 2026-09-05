@@ -15,10 +15,43 @@ services:
       - LOGGER_LEVEL=${LOGGER_LEVEL}
       - TIME_ZONE=${TIME_ZONE}
       - LOGGER_FOLDER=/app/out/logs
+      - KAFKA_BROKERS=todoapp-kafka:9092
+      - KAFKA_TOPIC_PREFIX=${KAFKA_TOPIC_PREFIX}
+      - KAFKA_WRITE_TIMEOUT=${KAFKA_WRITE_TIMEOUT}
+      - OUTBOX_POLL_INTERVAL=${OUTBOX_POLL_INTERVAL}
+      - OUTBOX_BATCH_SIZE=${OUTBOX_BATCH_SIZE}
+      - OUTBOX_RETENTION=${OUTBOX_RETENTION}
     volumes:
       - ${PROJECT_ROOT}/out/logs:/app/out/logs
     ports:
       - "5050:5050"
+    depends_on:
+      - todoapp-postgres
+      - todoapp-kafka
+    restart: always
+
+  projector:
+    build:
+      context: ${PROJECT_ROOT}
+      dockerfile: ${PROJECT_ROOT}/cmd/projector/Dockerfile
+    container_name: todoapp-projector
+    environment:
+      - KAFKA_BROKERS=todoapp-kafka:9092
+      - KAFKA_TOPIC_PREFIX=${KAFKA_TOPIC_PREFIX}
+      - PROJECTION_CONSUMER_GROUP=${PROJECTION_CONSUMER_GROUP}
+      - MONGO_HOST=todoapp-mongo
+      - MONGO_USER=${MONGO_USER}
+      - MONGO_PASSWORD=${MONGO_PASSWORD}
+      - MONGO_DB=${MONGO_DB}
+      - MONGO_TIMEOUT=${MONGO_TIMEOUT}
+      - LOGGER_LEVEL=${LOGGER_LEVEL}
+      - TIME_ZONE=${TIME_ZONE}
+      - LOGGER_FOLDER=/app/out/logs
+    volumes:
+      - ${PROJECT_ROOT}/out/logs:/app/out/logs
+    depends_on:
+      - todoapp-kafka
+      - todoapp-mongo
     restart: always
 
   todoapp-postgres:
@@ -37,12 +70,57 @@ services:
       volumes:
         - ${PROJECT_ROOT}/migrations:/migrations
 
+  todoapp-kafka:
+    image: apache/kafka:3.9.1
+    container_name: todoapp-env-kafka
+    environment:
+      - KAFKA_NODE_ID=1
+      - KAFKA_PROCESS_ROLES=broker,controller
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@todoapp-kafka:9093
+      - KAFKA_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,PLAINTEXT_HOST://:29092
+      # PLAINTEXT — для клиентов внутри compose-cети, PLAINTEXT_HOST — для
+      # локального запуска с хоста: брокер анонсирует клиенту адрес того
+      # листенера, через который тот подключился.
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://todoapp-kafka:9092,PLAINTEXT_HOST://localhost:29092
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
+      - KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS=0
+      - KAFKA_NUM_PARTITIONS=3
+      - KAFKA_LOG_DIRS=/var/lib/kafka/data
+      - CLUSTER_ID=todoapp-kafka-cluster
+    volumes:
+      - ${PROJECT_ROOT}/out/kafka:/var/lib/kafka/data
+    ports:
+      - "127.0.0.1:29092:29092"
+    restart: always
+
+  todoapp-mongo:
+    image: mongo:8.0
+    container_name: todoapp-env-mongo
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
+    volumes:
+      - ${PROJECT_ROOT}/out/mongodata:/data/db
+    restart: always
+
   port-forwarder:
     image: alpine/socat:1.8.1.3
     container_name: todoapp-postgres-port-forwarder
     command: tcp-listen:5432,fork,reuseaddr tcp-connect:todoapp-postgres:5432
-    ports: 
+    ports:
       - "127.0.0.1:5432:5432"
+
+  mongo-port-forwarder:
+    image: alpine/socat:1.8.1.3
+    container_name: todoapp-mongo-port-forwarder
+    command: tcp-listen:27017,fork,reuseaddr tcp-connect:todoapp-mongo:27017
+    ports:
+      - "127.0.0.1:27017:27017"
 
   swagger:
     build:

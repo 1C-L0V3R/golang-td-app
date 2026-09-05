@@ -7,6 +7,7 @@ import (
 
 	"github.com/1C-L0V3R/golang-td-app/internal/core/domain"
 	core_errors "github.com/1C-L0V3R/golang-td-app/internal/core/errors"
+	core_outbox "github.com/1C-L0V3R/golang-td-app/internal/core/outbox"
 	core_postgres_pool "github.com/1C-L0V3R/golang-td-app/internal/core/repository/postgres/pool"
 )
 
@@ -17,6 +18,12 @@ func (r *UsersRepository) PatchUser(
 ) (domain.User, error) {
 	ctx, cancel := context.WithTimeout(ctx, r.pool.OpTimeout())
 	defer cancel()
+
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return domain.User{}, fmt.Errorf("begin transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	query := `
 	UPDATE todoapp.users
@@ -32,7 +39,7 @@ func (r *UsersRepository) PatchUser(
 		phone_number;
 	`
 
-	row := r.pool.QueryRow(
+	row := tx.QueryRow(
 		ctx,
 		query,
 		user.FullName,
@@ -42,7 +49,7 @@ func (r *UsersRepository) PatchUser(
 	)
 
 	var userModel UserModel
-	err := row.Scan(
+	err = row.Scan(
 		&userModel.ID,
 		&userModel.Version,
 		&userModel.FullName,
@@ -66,6 +73,19 @@ func (r *UsersRepository) PatchUser(
 		userModel.FullName,
 		userModel.PhoneNumber,
 	)
+
+	event, err := core_outbox.NewUserEvent(core_outbox.EventTypeUpdated, userDomain)
+	if err != nil {
+		return domain.User{}, fmt.Errorf("build outbox event: %w", err)
+	}
+
+	if err := r.outbox.InsertEvent(ctx, tx, event); err != nil {
+		return domain.User{}, fmt.Errorf("insert outbox event: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return domain.User{}, fmt.Errorf("commit transaction: %w", err)
+	}
 
 	return userDomain, nil
 }

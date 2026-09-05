@@ -2,9 +2,12 @@ package tasks_postgres_repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	core_errors "github.com/1C-L0V3R/golang-td-app/internal/core/errors"
+	core_outbox "github.com/1C-L0V3R/golang-td-app/internal/core/outbox"
+	core_postgres_pool "github.com/1C-L0V3R/golang-td-app/internal/core/repository/postgres/pool"
 )
 
 func (r *TasksRepository) DeleteTask(
@@ -14,22 +17,54 @@ func (r *TasksRepository) DeleteTask(
 	ctx, cancel := context.WithTimeout(ctx, r.pool.OpTimeout())
 	defer cancel()
 
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	// RETURNING version: проектору нужна версия, под которой произошло
+	// удаление, чтобы отбросить запоздавшие события того же агрегата.
 	query := `
 	DELETE FROM todoapp.tasks
-	WHERE id=$1;
+	WHERE id=$1
+	RETURNING id, version;
 	`
 
-	cmdTag, err := r.pool.Exec(ctx, query, id)
-	if err != nil {
-		return fmt.Errorf("exec query: %w", err)
+	row := tx.QueryRow(ctx, query, id)
+
+	var (
+		deletedID      int
+		deletedVersion int
+	)
+
+	if err := row.Scan(&deletedID, &deletedVersion); err != nil {
+		if errors.Is(err, core_postgres_pool.ErrNoRows) {
+			return fmt.Errorf(
+				"task with id='%d': %w",
+				id,
+				core_errors.ErrNotFound,
+			)
+		}
+
+		return fmt.Errorf("scan error: %w", err)
 	}
 
-	if cmdTag.RowsAffected() == 0 {
-		return fmt.Errorf(
-			"task with id='%d': %w",
-			id,
-			core_errors.ErrNotFound,
-		)
+	event, err := core_outbox.NewDeletedEvent(
+		core_outbox.AggregateTypeTask,
+		deletedID,
+		deletedVersion,
+	)
+	if err != nil {
+		return fmt.Errorf("build outbox event: %w", err)
+	}
+
+	if err := r.outbox.InsertEvent(ctx, tx, event); err != nil {
+		return fmt.Errorf("insert outbox event: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return nil

@@ -4,26 +4,26 @@ export
 export PROJECT_ROOT=$(shell pwd)
 
 env-up:
-	@docker compose up -d todoapp-postgres
+	@docker compose up -d todoapp-postgres todoapp-kafka todoapp-mongo
 
 env-down:
-	@docker compose down todoapp-postgres
+	@docker compose down todoapp-postgres todoapp-kafka todoapp-mongo
 
 env-cleanup:
 	@read -p "Очистить все volume файлы окружения? ОПАСНОСТЬ УТЕРИ ДАННЫХ! [y/N]: " ans; \
 	if [ "$$ans" = "y" ]; then \
-		docker compose down todoapp-postgres port-forwarder && \
-		rm -rf ${PROJECT_ROOT}/out/pgdata && \
+		docker compose down todoapp-postgres todoapp-kafka todoapp-mongo port-forwarder mongo-port-forwarder && \
+		rm -rf ${PROJECT_ROOT}/out/pgdata ${PROJECT_ROOT}/out/kafka ${PROJECT_ROOT}/out/mongodata && \
 		echo "Файлы окружения очищены."; \
 	else \
 		echo "Очистка окружения отменена."; \
 	fi
 
 env-port-forward:
-	@docker compose up -d port-forwarder
+	@docker compose up -d port-forwarder mongo-port-forwarder
 
 env-port-close:
-	@docker compose down port-forwarder
+	@docker compose down port-forwarder mongo-port-forwarder
 
 migrate-create: 
 	@if [ -z "$(seq)" ]; then \
@@ -66,6 +66,7 @@ logs-cleanup:
 todoapp-run:
 	@export LOGGER_FOLDER=${PROJECT_ROOT}/out/logs && \
 	export POSTGRES_HOST=localhost && \
+	export KAFKA_BROKERS=localhost:29092 && \
 	go mod tidy && \
 	go run ${PROJECT_ROOT}/cmd/todoapp/main.go
 
@@ -74,6 +75,19 @@ todoapp-deploy:
 
 todoapp-undeploy:
 	@docker compose down todoapp
+
+projector-run:
+	@export LOGGER_FOLDER=${PROJECT_ROOT}/out/logs && \
+	export KAFKA_BROKERS=localhost:29092 && \
+	export MONGO_HOST=localhost && \
+	go mod tidy && \
+	go run ${PROJECT_ROOT}/cmd/projector/main.go
+
+projector-deploy:
+	@docker compose up -d --build projector
+
+projector-undeploy:
+	@docker compose down projector
 
 swagger-gen:
 	@docker compose run --rm swagger \
