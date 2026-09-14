@@ -89,6 +89,15 @@ projector-deploy:
 projector-undeploy:
 	@docker compose down projector
 
+test:
+	@go test ./... -count=1
+
+test-integration:
+	@go test ./tests/integration/... -count=1 -v
+
+test-unit:
+	@go test ./... -count=1 -short
+
 swagger-gen:
 	@docker compose run --rm swagger \
 	init \
